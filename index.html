@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Graph</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/default.min.css">
     <style>
         body {
             text-align: center;
@@ -12,15 +13,6 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-        }
-        .container {
-            position: relative;
-            display: inline-block;
-        }
-        canvas {
-            background-color: white;
-            border: 1px solid black;
-            cursor: crosshair;
         }
         .controls {
             margin: 10px;
@@ -31,10 +23,51 @@
             font-size: 16px;
             cursor: pointer;
         }
+
+        .main-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 90%;
+            max-width: 1200px;
+            margin-top: 20px;
+        }
+
+        .graph-container {
+            position: relative;
+            flex: 1;
+            margin-right: 20px;
+        }
+
+        canvas {
+            background-color: white;
+            border: 1px solid black;
+            cursor: crosshair;
+        }
+
+        .code-output-container {
+            flex: 1;
+            max-width: 500px;
+        }
+
         .axis-labels {
             position: absolute;
             font-size: 14px;
             color: black;
+        }
+
+        pre {
+            text-align: left;
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        code {
+            display: block;
+            padding: 10px;
         }
     </style>
 </head>
@@ -46,10 +79,23 @@
         <button onclick="resetZoom()">Reset Zoom</button>
         <button onclick="randomizePoints()">Randomize Points</button>
     </div>
-    <div class="container">
-        <canvas id="graphCanvas" width="600" height="600"></canvas>
-        <div id="axisLabels" class="axis-labels"></div>
+    <div class="main-container">
+        <!-- Graph Container -->
+        <div class="graph-container">
+            <canvas id="graphCanvas" width="600" height="600"></canvas>
+            <div id="axisLabels" class="axis-labels"></div>
+        </div>
+
+        <!-- Code and Output Container -->
+        <div class="code-output-container">
+            <h3>Function Code</h3>
+            <pre><code id="functionCode" class="javascript"></code></pre>
+            <h3>Output</h3>
+            <div id="output"></div>
+        </div>
     </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"></script>
     <script>
         const canvas = document.getElementById("graphCanvas");
         const ctx = canvas.getContext("2d");
@@ -115,6 +161,9 @@
                 points.push(getMousePos(event));
             }
             drawGraph();
+            if (points.length === 4) {
+                updateHighlightedCode();
+            }
         });
 
         canvas.addEventListener("mousedown", (event) => {
@@ -130,6 +179,9 @@
                 selectedPoint.x = mousePos.x;
                 selectedPoint.y = mousePos.y;
                 drawGraph();
+                if (points.length === 4) {
+                    updateHighlightedCode();
+                }
             }
         });
 
@@ -162,16 +214,85 @@
                 { x: Math.random() * 500 / scale, y: Math.random() * 500 / scale }
             ];
             drawGraph();
+            updateHighlightedCode()
         }
 
         function updateAxisLabels() {
             const axisDiv = document.getElementById("axisLabels");
             let labelsHTML = "";
             for (let i = 0; i <= 600; i += 100) {
-                labelsHTML += `<div style="position: absolute; top: ${i}px; left: -20px;">${Math.round(i / scale)}</div>`;
-                labelsHTML += `<div style="position: absolute; left: ${i}px; top: -20px;">${Math.round(i / scale)}</div>`;
+                // labelsHTML += `<div style="position: absolute; top: ${i}px; left: -20px;">${Math.round(i / scale)}</div>`;
+                // labelsHTML += `<div style="position: absolute; left: ${i}px; top: -20px;">${Math.round(i / scale)}</div>`;
             }
             axisDiv.innerHTML = labelsHTML;
+        }
+
+        function pointInTriangle(pt, v1, v2, v3) {
+            const sign = (a, b, c) => 
+                (a.x - c.x) * (b.y - c.y) - (b.x - c.x) * (a.y - c.y);
+
+            const d1 = sign(pt, v1, v2);
+            const d2 = sign(pt, v2, v3);
+            const d3 = sign(pt, v3, v1);
+
+            const hasNegative = d1 < 0 || d2 < 0 || d3 < 0;
+            const hasPositive = d1 > 0 || d2 > 0 || d3 > 0;
+
+            return !(hasNegative && hasPositive);
+        }
+
+        // Highlight function code with filled variables and run the function
+        function updateHighlightedCode() {
+            if (points.length === 4) {
+                const pt = points[0]; // red point
+                const v1 = points[1]; // first triangle point
+                const v2 = points[2]; // second triangle point
+                const v3 = points[3]; // third triangle point
+
+                // Call the function to check if the point is inside the triangle
+                const isInside = pointInTriangle(pt, v1, v2, v3);
+
+                // Update the function code with variables
+                const functionCode = `
+function pointInTriangle(pt, v1, v2, v3) {
+    const sign = (a, b, c) => 
+        (a.x - c.x) * (b.y - c.y) - (b.x - c.x) * (a.y - c.y);
+
+    const d1 = sign(pt, v1, v2);
+    const d2 = sign(pt, v2, v3);
+    const d3 = sign(pt, v3, v1);
+
+    const hasNegative = d1 < 0 || d2 < 0 || d3 < 0;
+    const hasPositive = d1 > 0 || d2 > 0 || d3 > 0;
+
+    return !(hasNegative && hasPositive);
+}
+                `;
+
+                // Fill in the variables
+                const highlightedCode = `
+function pointInTriangle(pt = {x: ${pt.x.toFixed(2)}, y: ${pt.y.toFixed(2)}} , v1 = {x: ${v1.x.toFixed(2)}, y: ${v1.y.toFixed(2)}}, v2 = {x: ${v2.x.toFixed(2)}, y: ${v2.y.toFixed(2)}}, v3 = {x: ${v3.x.toFixed(2)}, y: ${v3.y.toFixed(2)}}) {
+    const sign = (a, b, c) => 
+        (a.x - c.x) * (b.y - c.y) - (b.x - c.x) * (a.y - c.y);
+
+    const d1 = sign({x: ${pt.x.toFixed(2)}, y: ${pt.y.toFixed(2)}}, {x: ${v1.x.toFixed(2)}, y: ${v1.y.toFixed(2)}}, {x: ${v2.x.toFixed(2)}, y: ${v2.y.toFixed(2)}});
+    const d2 = sign({x: ${pt.x.toFixed(2)}, y: ${pt.y.toFixed(2)}}, {x: ${v2.x.toFixed(2)}, y: ${v2.y.toFixed(2)}}, {x: ${v3.x.toFixed(2)}, y: ${v3.y.toFixed(2)}});
+    const d3 = sign({x: ${pt.x.toFixed(2)}, y: ${pt.y.toFixed(2)}}, {x: ${v3.x.toFixed(2)}, y: ${v3.y.toFixed(2)}}, {x: ${v1.x.toFixed(2)}, y: ${v1.y.toFixed(2)}});
+
+    const hasNegative = d1 < 0 || d2 < 0 || d3 < 0;
+    const hasPositive = d1 > 0 || d2 > 0 || d3 > 0;
+
+    return !(hasNegative && hasPositive);
+}
+                `;
+                
+                // Display the code
+                document.getElementById("functionCode").textContent = highlightedCode;
+                hljs.highlightElement(document.getElementById("functionCode"));
+
+                // Display the output
+                document.getElementById("output").textContent = isInside ? "The point is inside the triangle." : "The point is outside the triangle.";
+            }
         }
 
         drawGraph();
