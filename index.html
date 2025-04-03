@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Graph</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            position: relative;
+            display: inline-block;
+        }
+        canvas {
+            background-color: white;
+            border: 1px solid black;
+            cursor: crosshair;
+        }
+        .controls {
+            margin: 10px;
+        }
+        button {
+            padding: 8px 15px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .axis-labels {
+            position: absolute;
+            font-size: 14px;
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <h2>Interactive Graph</h2>
+    <div class="controls">
+        <button onclick="zoomIn()">Zoom In</button>
+        <button onclick="zoomOut()">Zoom Out</button>
+        <button onclick="resetZoom()">Reset Zoom</button>
+        <button onclick="randomizePoints()">Randomize Points</button>
+    </div>
+    <div class="container">
+        <canvas id="graphCanvas" width="600" height="600"></canvas>
+        <div id="axisLabels" class="axis-labels"></div>
+    </div>
+    <script>
+        const canvas = document.getElementById("graphCanvas");
+        const ctx = canvas.getContext("2d");
+        let scale = 1;
+        let offsetX = 0, offsetY = 0;
+        let points = [];
+        let selectedPoint = null;
+
+        function drawGraph() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(offsetX, offsetY);
+            ctx.scale(scale, scale);
+
+            // Draw grid
+            const step = 50;
+            ctx.strokeStyle = "#ddd";
+            for (let x = 0; x < canvas.width / scale; x += step) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height / scale);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height / scale; y += step) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width / scale, y);
+                ctx.stroke();
+            }
+
+            // Draw triangle
+            if (points.length === 4) {
+                ctx.fillStyle = "rgba(0, 0, 255, 0.3)";
+                ctx.beginPath();
+                ctx.moveTo(points[1].x, points[1].y);
+                ctx.lineTo(points[2].x, points[2].y);
+                ctx.lineTo(points[3].x, points[3].y);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // Draw points
+            points.forEach((point, index) => {
+                ctx.fillStyle = index === 0 ? "red" : "blue";
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.restore();
+            updateAxisLabels();
+        }
+
+        function getMousePos(event) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: (event.clientX - rect.left - offsetX) / scale,
+                y: (event.clientY - rect.top - offsetY) / scale
+            };
+        }
+
+        canvas.addEventListener("click", (event) => {
+            if (points.length < 4) {
+                points.push(getMousePos(event));
+            }
+            drawGraph();
+        });
+
+        canvas.addEventListener("mousedown", (event) => {
+            const mousePos = getMousePos(event);
+            selectedPoint = points.find(p => 
+                Math.hypot(p.x - mousePos.x, p.y - mousePos.y) < 10
+            );
+        });
+
+        canvas.addEventListener("mousemove", (event) => {
+            if (selectedPoint) {
+                const mousePos = getMousePos(event);
+                selectedPoint.x = mousePos.x;
+                selectedPoint.y = mousePos.y;
+                drawGraph();
+            }
+        });
+
+        canvas.addEventListener("mouseup", () => {
+            selectedPoint = null;
+        });
+
+        function zoomIn() {
+            scale *= 1.2;
+            drawGraph();
+        }
+
+        function zoomOut() {
+            scale /= 1.2;
+            drawGraph();
+        }
+
+        function resetZoom() {
+            scale = 1;
+            offsetX = 0;
+            offsetY = 0;
+            drawGraph();
+        }
+
+        function randomizePoints() {
+            points = [
+                { x: Math.random() * 500 / scale, y: Math.random() * 500 / scale },
+                { x: Math.random() * 500 / scale, y: Math.random() * 500 / scale },
+                { x: Math.random() * 500 / scale, y: Math.random() * 500 / scale },
+                { x: Math.random() * 500 / scale, y: Math.random() * 500 / scale }
+            ];
+            drawGraph();
+        }
+
+        function updateAxisLabels() {
+            const axisDiv = document.getElementById("axisLabels");
+            let labelsHTML = "";
+            for (let i = 0; i <= 600; i += 100) {
+                labelsHTML += `<div style="position: absolute; top: ${i}px; left: -20px;">${Math.round(i / scale)}</div>`;
+                labelsHTML += `<div style="position: absolute; left: ${i}px; top: -20px;">${Math.round(i / scale)}</div>`;
+            }
+            axisDiv.innerHTML = labelsHTML;
+        }
+
+        drawGraph();
+    </script>
+</body>
+</html>
