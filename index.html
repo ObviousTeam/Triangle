@@ -222,14 +222,7 @@
         const axisDiv = document.getElementById("axisLabels");
         let labelsHTML = "";
         for (let i = 0; i <= 600; i += 100) {
-           labelsHTML += `
-          < div style = "position: absolute; top: ${i}px; left: -20px;" > $ {
-              Math.round(i / scale)
-            } < /div>`; 
-            labelsHTML += `
-            < div style = "position: absolute; left: ${i}px; top: -20px;" > $ {
-              Math.round(i / scale)
-            } < /div>`; 
+
         }
         axisDiv.innerHTML = labelsHTML;
       }
