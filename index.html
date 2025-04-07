@@ -1,259 +1,267 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Graph</title>
+    <title>Interactive Triangle Plotting Graph</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/default.min.css">
     <style>
-        body {
-            text-align: center;
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .controls {
-            margin: 10px;
-        }
-        button {
-            padding: 8px 15px;
-            margin: 5px;
-            font-size: 16px;
-            cursor: pointer;
-        }
+      body {
+        text-align: center;
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
 
-        .main-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            width: 90%;
-            max-width: 1200px;
-            margin-top: 20px;
-        }
+      .controls {
+        margin: 10px;
+      }
 
-        .graph-container {
-            position: relative;
-            flex: 1;
-            margin-right: 20px;
-        }
+      button {
+        padding: 8px 15px;
+        margin: 5px;
+        font-size: 16px;
+        cursor: pointer;
+      }
 
-        canvas {
-            background-color: white;
-            border: 1px solid black;
-            cursor: crosshair;
-        }
+      .main-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        width: 90%;
+        max-width: 1200px;
+        margin-top: 20px;
+      }
 
-        .code-output-container {
-            flex: 1;
-            max-width: 500px;
-        }
+      .graph-container {
+        position: relative;
+        flex: 1;
+        margin-right: 20px;
+      }
 
-        .axis-labels {
-            position: absolute;
-            font-size: 14px;
-            color: black;
-        }
+      canvas {
+        background-color: white;
+        border: 1px solid black;
+        cursor: crosshair;
+      }
 
-        pre {
-            text-align: left;
-            background: #f5f5f5;
-            padding: 15px;
-            border-radius: 5px;
-            width: 100%;
-            overflow-x: auto;
-        }
+      .code-output-container {
+        flex: 1;
+        max-width: 500px;
+      }
 
-        code {
-            display: block;
-            padding: 10px;
-        }
+      .axis-labels {
+        position: absolute;
+        font-size: 14px;
+        color: black;
+      }
+
+      pre {
+        text-align: left;
+        background: #f5f5f5;
+        padding: 15px;
+        border-radius: 5px;
+        width: 100%;
+        overflow-x: auto;
+      }
+
+      code {
+        display: block;
+        padding: 10px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <h2>Interactive Graph</h2>
     <div class="controls">
-        <button onclick="zoomIn()">Zoom In</button>
-        <button onclick="zoomOut()">Zoom Out</button>
-        <button onclick="resetZoom()">Reset Zoom</button>
-        <button onclick="randomizePoints()">Randomize Points</button>
+      <button onclick="zoomIn()">Zoom In</button>
+      <button onclick="zoomOut()">Zoom Out</button>
+      <button onclick="resetZoom()">Reset Zoom</button>
+      <button onclick="randomizePoints()">Randomize Points</button>
     </div>
     <div class="main-container">
-        <!-- Graph Container -->
-        <div class="graph-container">
-            <canvas id="graphCanvas" width="600" height="600"></canvas>
-            <div id="axisLabels" class="axis-labels"></div>
-        </div>
-
-        <!-- Code and Output Container -->
-        <div class="code-output-container">
-            <h3>Function Code</h3>
-            <pre><code id="functionCode" class="javascript"></code></pre>
-            <h3>Output</h3>
-            <div id="output"></div>
-        </div>
+      <!-- Graph Container -->
+      <div class="graph-container">
+        <canvas id="graphCanvas" width="600" height="600"></canvas>
+        <div id="axisLabels" class="axis-labels"></div>
+      </div>
+      <!-- Code and Output Container -->
+      <div class="code-output-container">
+        <h3>Function Code</h3>
+        <pre>
+								<code id="functionCode" class="javascript"></code>
+							</pre>
+        <h3>Output</h3>
+        <div id="output"></div>
+      </div>
     </div>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"></script>
     <script>
-        const canvas = document.getElementById("graphCanvas");
-        const ctx = canvas.getContext("2d");
-        let scale = 1;
-        let offsetX = 0, offsetY = 0;
-        let points = [];
-        let selectedPoint = null;
+      const canvas = document.getElementById("graphCanvas");
+      const ctx = canvas.getContext("2d");
+      let scale = 1;
+      let offsetX = 0,
+        offsetY = 0;
+      let points = [];
+      let selectedPoint = null;
 
-        function drawGraph() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.save();
-            ctx.translate(offsetX, offsetY);
-            ctx.scale(scale, scale);
-
-            // Draw grid
-            const step = 50;
-            ctx.strokeStyle = "#ddd";
-            for (let x = 0; x < canvas.width / scale; x += step) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvas.height / scale);
-                ctx.stroke();
-            }
-            for (let y = 0; y < canvas.height / scale; y += step) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(canvas.width / scale, y);
-                ctx.stroke();
-            }
-
-            // Draw triangle
-            if (points.length === 4) {
-                ctx.fillStyle = "rgba(0, 0, 255, 0.3)";
-                ctx.beginPath();
-                ctx.moveTo(points[1].x, points[1].y);
-                ctx.lineTo(points[2].x, points[2].y);
-                ctx.lineTo(points[3].x, points[3].y);
-                ctx.closePath();
-                ctx.fill();
-            }
-
-            // Draw points
-            points.forEach((point, index) => {
-                ctx.fillStyle = index === 0 ? "red" : "blue";
-                ctx.beginPath();
-                ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
-                ctx.fill();
-            });
-            ctx.restore();
-            updateAxisLabels();
+      function drawGraph() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.save();
+        ctx.translate(offsetX, offsetY);
+        ctx.scale(scale, scale);
+        // Draw grid
+        const step = 50;
+        ctx.strokeStyle = "#ddd";
+        for (let x = 0; x < canvas.width / scale; x += step) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, canvas.height / scale);
+          ctx.stroke();
         }
-
-        function getMousePos(event) {
-            const rect = canvas.getBoundingClientRect();
-            return {
-                x: (event.clientX - rect.left - offsetX) / scale,
-                y: (event.clientY - rect.top - offsetY) / scale
-            };
+        for (let y = 0; y < canvas.height / scale; y += step) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(canvas.width / scale, y);
+          ctx.stroke();
         }
-
-        canvas.addEventListener("click", (event) => {
-            if (points.length < 4) {
-                points.push(getMousePos(event));
-            }
-            drawGraph();
-            if (points.length === 4) {
-                updateHighlightedCode();
-            }
+        // Draw triangle
+        if (points.length === 4) {
+          ctx.fillStyle = "rgba(0, 0, 255, 0.3)";
+          ctx.beginPath();
+          ctx.moveTo(points[1].x, points[1].y);
+          ctx.lineTo(points[2].x, points[2].y);
+          ctx.lineTo(points[3].x, points[3].y);
+          ctx.closePath();
+          ctx.fill();
+        }
+        // Draw points
+        points.forEach((point, index) => {
+          ctx.fillStyle = index === 0 ? "red" : "blue";
+          ctx.beginPath();
+          ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
+          ctx.fill();
         });
+        ctx.restore();
+        updateAxisLabels();
+      }
 
-        canvas.addEventListener("mousedown", (event) => {
-            const mousePos = getMousePos(event);
-            selectedPoint = points.find(p => 
-                Math.hypot(p.x - mousePos.x, p.y - mousePos.y) < 10
-            );
-        });
-
-        canvas.addEventListener("mousemove", (event) => {
-            if (selectedPoint) {
-                const mousePos = getMousePos(event);
-                selectedPoint.x = mousePos.x;
-                selectedPoint.y = mousePos.y;
-                drawGraph();
-                if (points.length === 4) {
-                    updateHighlightedCode();
-                }
-            }
-        });
-
-        canvas.addEventListener("mouseup", () => {
-            selectedPoint = null;
-        });
-
-        function zoomIn() {
-            scale *= 1.2;
-            drawGraph();
+      function getMousePos(event) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+          x: (event.clientX - rect.left - offsetX) / scale,
+          y: (event.clientY - rect.top - offsetY) / scale
+        };
+      }
+      canvas.addEventListener("click", (event) => {
+        if (points.length < 4) {
+          points.push(getMousePos(event));
         }
-
-        function zoomOut() {
-            scale /= 1.2;
-            drawGraph();
+        drawGraph();
+        if (points.length === 4) {
+          updateHighlightedCode();
         }
-
-        function resetZoom() {
-            scale = 1;
-            offsetX = 0;
-            offsetY = 0;
-            drawGraph();
+      });
+      canvas.addEventListener("mousedown", (event) => {
+        const mousePos = getMousePos(event);
+        selectedPoint = points.find(p => Math.hypot(p.x - mousePos.x, p.y - mousePos.y) < 10);
+      });
+      canvas.addEventListener("mousemove", (event) => {
+        if (selectedPoint) {
+          const mousePos = getMousePos(event);
+          selectedPoint.x = mousePos.x;
+          selectedPoint.y = mousePos.y;
+          drawGraph();
+          if (points.length === 4) {
+            updateHighlightedCode();
+          }
         }
+      });
+      canvas.addEventListener("mouseup", () => {
+        selectedPoint = null;
+      });
 
-        function randomizePoints() {
-            points = [
-                { x: Math.random() * 500 / scale, y: Math.random() * 500 / scale },
-                { x: Math.random() * 500 / scale, y: Math.random() * 500 / scale },
-                { x: Math.random() * 500 / scale, y: Math.random() * 500 / scale },
-                { x: Math.random() * 500 / scale, y: Math.random() * 500 / scale }
-            ];
-            drawGraph();
-            updateHighlightedCode()
+      function zoomIn() {
+        scale *= 1.2;
+        drawGraph();
+      }
+
+      function zoomOut() {
+        scale /= 1.2;
+        drawGraph();
+      }
+
+      function resetZoom() {
+        scale = 1;
+        offsetX = 0;
+        offsetY = 0;
+        drawGraph();
+      }
+
+      function randomizePoints() {
+        points = [{
+          x: Math.random() * 500 / scale,
+          y: Math.random() * 500 / scale
+        }, {
+          x: Math.random() * 500 / scale,
+          y: Math.random() * 500 / scale
+        }, {
+          x: Math.random() * 500 / scale,
+          y: Math.random() * 500 / scale
+        }, {
+          x: Math.random() * 500 / scale,
+          y: Math.random() * 500 / scale
+        }];
+        drawGraph();
+        updateHighlightedCode()
+      }
+
+      function updateAxisLabels() {
+        const axisDiv = document.getElementById("axisLabels");
+        let labelsHTML = "";
+        for (let i = 0; i <= 600; i += 100) {
+          // labelsHTML += `
+          < div style = "position: absolute; top: ${i}px; left: -20px;" > $ {
+              Math.round(i / scale)
+            } < /div>`; 
+            // labelsHTML += `
+            < div style = "position: absolute; left: ${i}px; top: -20px;" > $ {
+              Math.round(i / scale)
+            } < /div>`; 
         }
+        axisDiv.innerHTML = labelsHTML;
+      }
 
-        function updateAxisLabels() {
-            const axisDiv = document.getElementById("axisLabels");
-            let labelsHTML = "";
-            for (let i = 0; i <= 600; i += 100) {
-                // labelsHTML += `<div style="position: absolute; top: ${i}px; left: -20px;">${Math.round(i / scale)}</div>`;
-                // labelsHTML += `<div style="position: absolute; left: ${i}px; top: -20px;">${Math.round(i / scale)}</div>`;
-            }
-            axisDiv.innerHTML = labelsHTML;
-        }
-
-        function pointInTriangle(pt, v1, v2, v3) {
-            const sign = (a, b, c) => 
-                (a.x - c.x) * (b.y - c.y) - (b.x - c.x) * (a.y - c.y);
-
-            const d1 = sign(pt, v1, v2);
-            const d2 = sign(pt, v2, v3);
-            const d3 = sign(pt, v3, v1);
-
-            const hasNegative = d1 < 0 || d2 < 0 || d3 < 0;
-            const hasPositive = d1 > 0 || d2 > 0 || d3 > 0;
-
-            return !(hasNegative && hasPositive);
-        }
-
-        // Highlight function code with filled variables and run the function
-        function updateHighlightedCode() {
-            if (points.length === 4) {
-                const pt = points[0]; // red point
-                const v1 = points[1]; // first triangle point
-                const v2 = points[2]; // second triangle point
-                const v3 = points[3]; // third triangle point
-
-                // Call the function to check if the point is inside the triangle
-                const isInside = pointInTriangle(pt, v1, v2, v3);
-
-                // Update the function code with variables
-                const functionCode = `
+      function pointInTriangle(pt, v1, v2, v3) {
+        const sign = (a, b, c) => (a.x - c.x) * (b.y - c.y) - (b.x - c.x) * (a.y - c.y);
+        const d1 = sign(pt, v1, v2);
+        const d2 = sign(pt, v2, v3);
+        const d3 = sign(pt, v3, v1);
+        const hasNegative = d1 < 0 || d2 < 0 || d3 < 0;
+        const hasPositive = d1 > 0 || d2 > 0 || d3 > 0;
+        return !(hasNegative && hasPositive);
+      }
+      // Highlight function code with filled variables and run the function
+      function updateHighlightedCode() {
+        if (points.length === 4) {
+          const pt = points[0]; // red point
+          const v1 = points[1]; // first triangle point
+          const v2 = points[2]; // second triangle point
+          const v3 = points[3]; // third triangle point
+          // Calculate signs (d1, d2, d3)
+          const sign = (a, b, c) => (a.x - c.x) * (b.y - c.y) - (b.x - c.x) * (a.y - c.y);
+          const d1 = sign(pt, v1, v2);
+          const d2 = sign(pt, v2, v3);
+          const d3 = sign(pt, v3, v1);
+          // Now we display the actual values of d1, d2, and d3
+          const hasNegative = d1 < 0 || d2 < 0 || d3 < 0;
+          const hasPositive = d1 > 0 || d2 > 0 || d3 > 0;
+          // Call the function to check if the point is inside the triangle
+          const isInside = !(hasNegative && hasPositive);
+          // Update the function code with variables
+          const functionCode = `
 function pointInTriangle(pt, v1, v2, v3) {
     const sign = (a, b, c) => 
         (a.x - c.x) * (b.y - c.y) - (b.x - c.x) * (a.y - c.y);
@@ -267,35 +275,31 @@ function pointInTriangle(pt, v1, v2, v3) {
 
     return !(hasNegative && hasPositive);
 }
-                `;
-
-                // Fill in the variables
-                const highlightedCode = `
-function pointInTriangle(pt = {x: ${pt.x.toFixed(2)}, y: ${pt.y.toFixed(2)}} , v1 = {x: ${v1.x.toFixed(2)}, y: ${v1.y.toFixed(2)}}, v2 = {x: ${v2.x.toFixed(2)}, y: ${v2.y.toFixed(2)}}, v3 = {x: ${v3.x.toFixed(2)}, y: ${v3.y.toFixed(2)}}) {
+        `;
+          // Fill in the variables
+          const highlightedCode = `
+function pointInTriangle(pt = {x: ${pt.x}, y: ${pt.y}} , v1 = {x: ${v1.x}, y: ${v1.y}}, v2 = {x: ${v2.x}, y: ${v2.y}}, v3 = {x: ${v3.x}, y: ${v3.y}}) {
     const sign = (a, b, c) => 
         (a.x - c.x) * (b.y - c.y) - (b.x - c.x) * (a.y - c.y);
 
-    const d1 = sign({x: ${pt.x.toFixed(2)}, y: ${pt.y.toFixed(2)}}, {x: ${v1.x.toFixed(2)}, y: ${v1.y.toFixed(2)}}, {x: ${v2.x.toFixed(2)}, y: ${v2.y.toFixed(2)}});
-    const d2 = sign({x: ${pt.x.toFixed(2)}, y: ${pt.y.toFixed(2)}}, {x: ${v2.x.toFixed(2)}, y: ${v2.y.toFixed(2)}}, {x: ${v3.x.toFixed(2)}, y: ${v3.y.toFixed(2)}});
-    const d3 = sign({x: ${pt.x.toFixed(2)}, y: ${pt.y.toFixed(2)}}, {x: ${v3.x.toFixed(2)}, y: ${v3.y.toFixed(2)}}, {x: ${v1.x.toFixed(2)}, y: ${v1.y.toFixed(2)}});
+    const d1 = sign({x: ${pt.x}, y: ${pt.y}}, {x: ${v1.x}, y: ${v1.y}}, {x: ${v2.x}, y: ${v2.y}});
+    const d2 = sign({x: ${pt.x}, y: ${pt.y}}, {x: ${v2.x}, y: ${v2.y}}, {x: ${v3.x}, y: ${v3.y}});
+    const d3 = sign({x: ${pt.x}, y: ${pt.y}}, {x: ${v3.x}, y: ${v3.y}}, {x: ${v1.x}, y: ${v1.y}});
 
-    const hasNegative = d1 < 0 || d2 < 0 || d3 < 0;
-    const hasPositive = d1 > 0 || d2 > 0 || d3 > 0;
+    const hasNegative = d1 < 0 || d2 < 0 || d3 < 0; // d1 = ${d1}, d2 = ${d2}, d3 = ${d3}
+    const hasPositive = d1 > 0 || d2 > 0 || d3 > 0; // d1 = ${d1}, d2 = ${d2}, d3 = ${d3}
 
     return !(hasNegative && hasPositive);
 }
-                `;
-                
-                // Display the code
-                document.getElementById("functionCode").textContent = highlightedCode;
-                hljs.highlightElement(document.getElementById("functionCode"));
-
-                // Display the output
-                document.getElementById("output").textContent = isInside ? "The point is inside the triangle." : "The point is outside the triangle.";
-            }
+        `;
+          // Display the code
+          document.getElementById("functionCode").textContent = highlightedCode;
+          hljs.highlightElement(document.getElementById("functionCode"));
+          // Display the output
+          document.getElementById("output").textContent = isInside ? "The point is inside the triangle." : "The point is outside the triangle.";
         }
-
-        drawGraph();
+      }
+      drawGraph();
     </script>
-</body>
+  </body>
 </html>
